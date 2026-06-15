@@ -5,7 +5,7 @@ let socket = null;
 export const initSocket = (token) => {
   if (socket) socket.disconnect();
 
-  socket = io('http://localhost:5002', {
+  socket = io(import.meta.env.VITE_API_URL || 'http://localhost:5002', {
     auth: { token },
     transports: ['websocket', 'polling'],
     reconnectionAttempts: 5,
