@@ -1,0 +1,22 @@
+{
+  "name": "nexus-chat",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Real-Time Chat Application built with React 19, Supabase, and Cloudflare Pages",
+  "scripts": {
+    "build": "cd frontend && npm install && npm run build",
+    "dev": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run dev",
+    "install:all": "npm --prefix frontend install && npm --prefix backend install"
+  },
+  "keywords": [
+    "chat",
+    "react",
+    "supabase",
+    "cloudflare-pages",
+    "realtime",
+    "vite",
+    "websockets"
+  ],
+  "author": "Uddhav-byte"
+}

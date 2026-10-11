@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { isSupabaseConfigured } from '../services/supabase';
 
 const Register = () => {
   const [username, setUsername] = useState('');
@@ -18,7 +19,7 @@ const Register = () => {
     try {
       await register(username, email, password);
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to register');
+      setError(err.message || err.response?.data?.message || 'Failed to create account.');
     } finally {
       setLoading(false);
     }
@@ -31,6 +32,22 @@ const Register = () => {
           <h1 className="auth-title">Create Account</h1>
           <p className="auth-subtitle">Join Nexus Chat today</p>
         </div>
+
+        {!isSupabaseConfigured && (
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: '8px',
+            padding: '0.75rem',
+            marginBottom: '1rem',
+            fontSize: '0.85rem',
+            color: '#f87171',
+            lineHeight: 1.4
+          }}>
+            ⚠️ <strong>Supabase credentials not detected.</strong><br />
+            Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> to your environment to connect.
+          </div>
+        )}
 
         {error && <div className="error-msg">{error}</div>}
 

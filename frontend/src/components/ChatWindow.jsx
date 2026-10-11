@@ -1,51 +1,134 @@
 import { useState, useEffect, useRef } from 'react';
-import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { supabase, messageService, roomService, isSupabaseConfigured } from '../services/supabase';
+import api from '../services/api';
 
 const ChatWindow = ({ room, onBack }) => {
-  const { socket, user } = useAuth();
+  const { socket, user, isSupabase } = useAuth();
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [typingUsers, setTypingUsers] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const messagesEndRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const realtimeChannelRef = useRef(null);
+
+  const roomId = room?._id || room?.id;
 
   useEffect(() => {
+    if (!roomId) return;
+
     setMessages([]);
     setLoading(true);
     fetchMessages();
 
-    if (socket) {
-      socket.emit('room:join', room._id);
+    if (isSupabase && supabase && user) {
+      // 1. Join room
+      roomService.joinRoom(roomId, user.id || user._id);
+
+      // 2. Realtime channel for messages and typing indicators
+      const channel = supabase.channel(`room:${roomId}`, {
+        config: { broadcast: { self: false } },
+      });
+
+      realtimeChannelRef.current = channel;
+
+      channel
+        .on(
+          'postgres_changes',
+          {
+            event: 'INSERT',
+            schema: 'public',
+            table: 'messages',
+            filter: `room_id=eq.${roomId}`,
+          },
+          async (payload) => {
+            const row = payload.new;
+
+            // Fetch profile for sender username
+            let senderProfile = null;
+            try {
+              const { data: profile } = await supabase
+                .from('profiles')
+                .select('id, username, avatar_url')
+                .eq('id', row.sender_id)
+                .maybeSingle();
+              senderProfile = profile;
+            } catch (err) {
+              console.error('Error fetching sender profile:', err);
+            }
+
+            const formattedMsg = {
+              _id: row.id,
+              id: row.id,
+              content: row.content,
+              type: row.type || 'text',
+              createdAt: row.created_at,
+              room: row.room_id,
+              sender: {
+                _id: row.sender_id,
+                id: row.sender_id,
+                username: senderProfile?.username || (row.sender_id === (user.id || user._id) ? user.username : 'User'),
+                avatar: senderProfile?.avatar_url || '',
+              },
+            };
+
+            setMessages((prev) => {
+              if (prev.some((m) => (m.id || m._id) === formattedMsg.id)) return prev;
+              return [...prev, formattedMsg];
+            });
+          }
+        )
+        .on('broadcast', { event: 'typing' }, ({ payload }) => {
+          if (!payload?.username || payload.username === user.username) return;
+
+          setTypingUsers((prev) => {
+            const next = new Set(prev);
+            if (payload.isTyping) {
+              next.add(payload.username);
+            } else {
+              next.delete(payload.username);
+            }
+            return next;
+          });
+        })
+        .subscribe();
+
+      return () => {
+        if (realtimeChannelRef.current) {
+          supabase.removeChannel(realtimeChannelRef.current);
+          realtimeChannelRef.current = null;
+        }
+      };
+    } else if (socket) {
+      // Legacy Socket.io mode
+      socket.emit('room:join', roomId);
 
       socket.on('message:new', (msg) => {
-        if (msg.room === room._id) {
-          setMessages(prev => [...prev, msg]);
+        if (msg.room === roomId) {
+          setMessages((prev) => [...prev, msg]);
         }
       });
 
-      socket.on('typing:update', ({ userId, username, isTyping }) => {
-        setTypingUsers(prev => {
-          const newSet = new Set(prev);
+      socket.on('typing:update', ({ username, isTyping }) => {
+        setTypingUsers((prev) => {
+          const next = new Set(prev);
           if (isTyping) {
-            newSet.add(username);
+            next.add(username);
           } else {
-            newSet.delete(username);
+            next.delete(username);
           }
-          return newSet;
+          return next;
         });
       });
-    }
 
-    return () => {
-      if (socket) {
-        socket.emit('room:leave', room._id);
+      return () => {
+        socket.emit('room:leave', roomId);
         socket.off('message:new');
         socket.off('typing:update');
-      }
-    };
-  }, [room._id, socket]);
+      };
+    }
+  }, [roomId, isSupabase, user, socket]);
 
   useEffect(() => {
     scrollToBottom();
@@ -53,8 +136,13 @@ const ChatWindow = ({ room, onBack }) => {
 
   const fetchMessages = async () => {
     try {
-      const { data } = await api.get(`/rooms/${room._id}/messages`);
-      setMessages(data);
+      if (isSupabase) {
+        const data = await messageService.getMessages(roomId);
+        setMessages(data);
+      } else {
+        const { data } = await api.get(`/rooms/${roomId}/messages`);
+        setMessages(data);
+      }
     } catch (error) {
       console.error('Failed to fetch messages', error);
     } finally {
@@ -69,33 +157,69 @@ const ChatWindow = ({ room, onBack }) => {
   const handleTyping = (e) => {
     setNewMessage(e.target.value);
 
-    if (socket) {
-      socket.emit('typing:start', { roomId: room._id });
+    if (isSupabase && realtimeChannelRef.current) {
+      realtimeChannelRef.current.send({
+        type: 'broadcast',
+        event: 'typing',
+        payload: { username: user?.username || 'User', isTyping: true },
+      });
 
       if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
-      
       typingTimeoutRef.current = setTimeout(() => {
-        socket.emit('typing:stop', { roomId: room._id });
+        realtimeChannelRef.current?.send({
+          type: 'broadcast',
+          event: 'typing',
+          payload: { username: user?.username || 'User', isTyping: false },
+        });
+      }, 1200);
+    } else if (socket) {
+      socket.emit('typing:start', { roomId });
+
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        socket.emit('typing:stop', { roomId });
       }, 1000);
     }
   };
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    if (!newMessage.trim() || !socket) return;
+    const content = newMessage.trim();
+    if (!content) return;
 
-    socket.emit('message:send', {
-      roomId: room._id,
-      content: newMessage,
-    });
-    
-    socket.emit('typing:stop', { roomId: room._id });
     setNewMessage('');
+
+    if (isSupabase) {
+      // Clear typing broadcast
+      if (realtimeChannelRef.current) {
+        realtimeChannelRef.current.send({
+          type: 'broadcast',
+          event: 'typing',
+          payload: { username: user?.username || 'User', isTyping: false },
+        });
+      }
+
+      try {
+        await messageService.sendMessage(roomId, content, user.id || user._id);
+      } catch (error) {
+        console.error('Failed to send message via Supabase:', error);
+        alert(error.message || 'Failed to send message');
+      }
+    } else if (socket) {
+      socket.emit('message:send', { roomId, content });
+      socket.emit('typing:stop', { roomId });
+    }
   };
 
   const formatTime = (dateStr) => {
-    return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    try {
+      return new Date(dateStr).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    } catch {
+      return '';
+    }
   };
+
+  const currentUserId = user?.id || user?._id;
 
   return (
     <div className="chat-area glass">
@@ -104,14 +228,20 @@ const ChatWindow = ({ room, onBack }) => {
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <button 
             onClick={onBack}
-            style={{ background: 'transparent', color: 'var(--text-main)', fontSize: '1.2rem', display: window.innerWidth <= 768 ? 'block' : 'none' }}
+            style={{
+              background: 'transparent',
+              color: 'var(--text-main)',
+              fontSize: '1.2rem',
+              cursor: 'pointer',
+              display: window.innerWidth <= 768 ? 'block' : 'none',
+            }}
           >
             ←
           </button>
           <div>
-            <h2 style={{ fontSize: '1.1rem', margin: 0 }}>{room.name}</h2>
+            <h2 style={{ fontSize: '1.1rem', margin: 0 }}>{room?.name || 'Chat Room'}</h2>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-              {room.members?.length || 0} members
+              {room?.description || `${room?.members?.length || 0} members`}
             </p>
           </div>
         </div>
@@ -120,25 +250,39 @@ const ChatWindow = ({ room, onBack }) => {
       {/* Messages */}
       <div className="chat-messages">
         {loading ? (
-          <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Loading messages...</div>
+          <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>
+            Loading messages...
+          </div>
         ) : (
           <>
-            {messages.map((msg, idx) => {
-              const isSelf = msg.sender._id === user._id;
-              const isSystem = msg.type === 'system';
+            {messages.length === 0 ? (
+              <div style={{ textAlign: 'center', color: 'var(--text-muted)', margin: 'auto' }}>
+                <p>No messages yet in <strong>#{room?.name}</strong>.</p>
+                <p style={{ fontSize: '0.85rem' }}>Say hello to kick things off!</p>
+              </div>
+            ) : (
+              messages.map((msg, idx) => {
+                const senderId = msg.sender?._id || msg.sender?.id || msg.sender_id;
+                const isSelf = senderId === currentUserId;
+                const isSystem = msg.type === 'system';
 
-              if (isSystem) {
-                return <div key={msg._id || idx} className="message system">{msg.content}</div>;
-              }
+                if (isSystem) {
+                  return <div key={msg._id || msg.id || idx} className="message system">{msg.content}</div>;
+                }
 
-              return (
-                <div key={msg._id || idx} className={`message ${isSelf ? 'self' : 'other'}`}>
-                  {!isSelf && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem', marginLeft: '0.5rem' }}>{msg.sender.username}</div>}
-                  <div className="message-bubble">{msg.content}</div>
-                  <div className="message-meta">{formatTime(msg.createdAt || new Date())}</div>
-                </div>
-              );
-            })}
+                return (
+                  <div key={msg._id || msg.id || idx} className={`message ${isSelf ? 'self' : 'other'}`}>
+                    {!isSelf && (
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.2rem', marginLeft: '0.5rem' }}>
+                        {msg.sender?.username || 'User'}
+                      </div>
+                    )}
+                    <div className="message-bubble">{msg.content}</div>
+                    <div className="message-meta">{formatTime(msg.createdAt || msg.created_at || new Date())}</div>
+                  </div>
+                );
+              })
+            )}
             <div ref={messagesEndRef} />
           </>
         )}
@@ -159,7 +303,7 @@ const ChatWindow = ({ room, onBack }) => {
             className="input-field"
             value={newMessage}
             onChange={handleTyping}
-            placeholder={`Message ${room.name}...`}
+            placeholder={`Message #${room?.name || 'room'}...`}
             style={{ flex: 1 }}
           />
           <button type="submit" className="send-btn" disabled={!newMessage.trim()}>
