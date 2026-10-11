@@ -12,7 +12,7 @@
 ## 🌐 Live Demo & Deployment
 
 - **GitHub Repository**: [https://github.com/Uddhav-byte/chat-app](https://github.com/Uddhav-byte/chat-app)
-- **Live Deployment**: Deployable on **Cloudflare Pages** at `https://<your-project>.pages.dev` (follow setup below)
+- **Live Deployment**: [https://chat-app-4av.pages.dev](https://chat-app-4av.pages.dev)
 
 ---
 
@@ -165,7 +165,7 @@ To complete your GitHub repo configuration:
 - **Repository Description**:
   > `⚡ Modern real-time serverless chat app built with React 19, Supabase Realtime & Auth, and deployed on Cloudflare Pages.`
 - **Website URL**:
-  > `https://<your-project>.pages.dev`
+  > `https://chat-app-4av.pages.dev`
 - **Topic Tags**:
   > `react`, `supabase`, `cloudflare-pages`, `realtime-chat`, `vite`, `websockets`, `postgresql`
 
