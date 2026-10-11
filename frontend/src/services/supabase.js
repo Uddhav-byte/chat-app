@@ -25,7 +25,7 @@ export const supabase = isSupabaseConfigured
     })
   : null;
 
-// Default demo rooms for instant recruiter exploration
+// Default demo rooms for instant demo exploration
 export const DEMO_ROOMS = [
   {
     _id: 'demo-room-general',
@@ -38,9 +38,9 @@ export const DEMO_ROOMS = [
     members: ['demo-user-123', 'nexus-bot'],
   },
   {
-    _id: 'demo-room-recruiter',
-    id: 'demo-room-recruiter',
-    name: 'Recruiter Lounge',
+    _id: 'demo-room-showcase',
+    id: 'demo-room-showcase',
+    name: 'Project Showcase',
     description: 'Tech stack details, architecture, and project highlights.',
     isPrivate: false,
     createdAt: new Date().toISOString(),
@@ -91,14 +91,14 @@ export const DEMO_MESSAGES = {
       },
     },
   ],
-  'demo-room-recruiter': [
+  'demo-room-showcase': [
     {
-      _id: 'msg-recruiter-1',
-      id: 'msg-recruiter-1',
-      content: 'Hello and welcome! Thank you for reviewing my chat application portfolio project.',
+      _id: 'msg-showcase-1',
+      id: 'msg-showcase-1',
+      content: 'Hello and welcome! Thank you for checking out this chat application demo.',
       type: 'text',
       createdAt: new Date(Date.now() - 7200000).toISOString(),
-      room: 'demo-room-recruiter',
+      room: 'demo-room-showcase',
       sender: {
         _id: 'uddhav-creator',
         id: 'uddhav-creator',
@@ -107,12 +107,12 @@ export const DEMO_MESSAGES = {
       },
     },
     {
-      _id: 'msg-recruiter-2',
-      id: 'msg-recruiter-2',
+      _id: 'msg-showcase-2',
+      id: 'msg-showcase-2',
       content: '⚡ Architecture Highlights:\n• Frontend: React 19 + Vite deployed to Cloudflare Pages edge CDN.\n• Realtime & DB: Supabase (PostgreSQL, Realtime replication & Presence).\n• Security: Row Level Security (RLS) policies.',
       type: 'text',
       createdAt: new Date(Date.now() - 3600000).toISOString(),
-      room: 'demo-room-recruiter',
+      room: 'demo-room-showcase',
       sender: {
         _id: 'nexus-bot',
         id: 'nexus-bot',

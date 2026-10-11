@@ -4,7 +4,7 @@ import { supabase, messageService, roomService } from '../services/supabase';
 import api from '../services/api';
 
 const QUICK_PROMPTS = [
-  '👋 Hello from HR / Recruitment!',
+  '👋 Hello, testing the demo!',
   '🛠️ Tell me about the tech stack',
   '⚡ How does real-time messaging work?',
 ];
@@ -217,7 +217,7 @@ const ChatWindow = ({ room, onBack }) => {
     setMessages((prev) => [...prev, userMessage]);
 
     if (isDemoMode) {
-      // Simulate real-time bot response for HR demo experience
+      // Simulate real-time bot response for demo experience
       setTimeout(() => {
         setTypingUsers((prev) => new Set(prev).add('Nexus Bot 🤖'));
       }, 600);
@@ -235,7 +235,7 @@ const ChatWindow = ({ room, onBack }) => {
           botReply = BOT_RESPONSES.stack;
         } else if (lower.includes('architecture') || lower.includes('serverless') || lower.includes('cloudflare')) {
           botReply = BOT_RESPONSES.architecture;
-        } else if (lower.includes('hello') || lower.includes('hi') || lower.includes('hr')) {
+        } else if (lower.includes('hello') || lower.includes('hi')) {
           botReply = `👋 Hello ${user?.username || 'there'}! Wonderful to connect with you. Ask me about the tech stack, real-time architecture, or try creating a new room!`;
         }
 
@@ -387,7 +387,7 @@ const ChatWindow = ({ room, onBack }) => {
         </div>
       )}
 
-      {/* Quick Prompts for HR / Recruiters */}
+      {/* Quick Prompts for Demo Mode */}
       {isDemoMode && (
         <div style={{
           display: 'flex',

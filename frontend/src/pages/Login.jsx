@@ -44,14 +44,14 @@ const Login = () => {
             <span>✨</span> Portfolio Live Showcase
           </div>
           <h1 className="auth-title">Nexus Chat</h1>
-          <p className="auth-subtitle">Sign in or explore instantly with recruiter demo access</p>
+          <p className="auth-subtitle">Sign in or explore instantly with demo access</p>
         </div>
 
-        {/* Instant Recruiter / HR Demo Button */}
+        {/* Instant Demo Button */}
         <div style={{ marginBottom: '1.5rem' }}>
           <button
             type="button"
-            onClick={() => demoLogin('HR Recruiter')}
+            onClick={() => demoLogin('Demo User')}
             style={{
               width: '100%',
               padding: '0.85rem 1rem',
@@ -70,10 +70,10 @@ const Login = () => {
               transition: 'transform 0.15s ease, box-shadow 0.15s ease',
             }}
           >
-            <span>👔</span> Instant HR / Recruiter Demo Access
+            <span>⚡</span> Instant Demo Access
           </button>
           <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '0.4rem' }}>
-            ⚡ 1-Click access • No registration or verification required
+            1-Click access • No registration required
           </p>
         </div>
 

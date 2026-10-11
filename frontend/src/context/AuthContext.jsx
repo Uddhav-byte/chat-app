@@ -136,12 +136,12 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  const demoLogin = (role = 'HR Recruiter') => {
+  const demoLogin = (name = 'Demo User') => {
     const demoUser = {
       id: 'demo-user-123',
       _id: 'demo-user-123',
-      username: role === 'HR Recruiter' ? 'HR Recruiter' : 'Guest Explorer',
-      email: 'recruiter@demo.nexuschat.dev',
+      username: name || 'Demo User',
+      email: 'demo@nexuschat.dev',
       avatar: '',
       isDemo: true,
     };
