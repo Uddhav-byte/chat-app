@@ -9,7 +9,7 @@ const Register = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { register } = useAuth();
+  const { register, demoLogin } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,25 +29,60 @@ const Register = () => {
     <div className="auth-container">
       <div className="auth-box glass-card">
         <div className="auth-header">
+          <div style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: '0.4rem',
+            background: 'rgba(99, 102, 241, 0.15)',
+            border: '1px solid rgba(99, 102, 241, 0.3)',
+            borderRadius: '999px',
+            padding: '0.25rem 0.75rem',
+            fontSize: '0.75rem',
+            color: 'var(--primary)',
+            fontWeight: 600,
+            marginBottom: '0.75rem'
+          }}>
+            <span>✨</span> Portfolio Live Showcase
+          </div>
           <h1 className="auth-title">Create Account</h1>
-          <p className="auth-subtitle">Join Nexus Chat today</p>
+          <p className="auth-subtitle">Join Nexus Chat or skip sign-up with demo access</p>
         </div>
 
-        {!isSupabaseConfigured && (
-          <div style={{
-            background: 'rgba(239, 68, 68, 0.1)',
-            border: '1px solid rgba(239, 68, 68, 0.3)',
-            borderRadius: '8px',
-            padding: '0.75rem',
-            marginBottom: '1rem',
-            fontSize: '0.85rem',
-            color: '#f87171',
-            lineHeight: 1.4
-          }}>
-            ⚠️ <strong>Supabase credentials not detected.</strong><br />
-            Add <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> to your environment to connect.
-          </div>
-        )}
+        {/* Instant Recruiter / HR Demo Button */}
+        <div style={{ marginBottom: '1.5rem' }}>
+          <button
+            type="button"
+            onClick={() => demoLogin('HR Recruiter')}
+            style={{
+              width: '100%',
+              padding: '0.85rem 1rem',
+              borderRadius: 'var(--radius-md)',
+              background: 'linear-gradient(135deg, #6366f1 0%, #ec4899 100%)',
+              color: '#ffffff',
+              fontWeight: 600,
+              fontSize: '0.95rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              boxShadow: '0 4px 15px rgba(99, 102, 241, 0.4)',
+              cursor: 'pointer',
+              border: 'none',
+              transition: 'transform 0.15s ease, box-shadow 0.15s ease',
+            }}
+          >
+            <span>👔</span> Instant HR / Recruiter Demo Access
+          </button>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textAlign: 'center', marginTop: '0.4rem' }}>
+            ⚡ 1-Click access • No registration or verification required
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.25rem' }}>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border-light)' }}></div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>or register with email</span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border-light)' }}></div>
+        </div>
 
         {error && <div className="error-msg">{error}</div>}
 

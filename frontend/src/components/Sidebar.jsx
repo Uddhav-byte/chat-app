@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { supabase, roomService, isSupabaseConfigured } from '../services/supabase';
+import { supabase, roomService, DEMO_ROOMS } from '../services/supabase';
 import api from '../services/api';
 import RoomCard from './RoomCard';
 
@@ -14,7 +14,14 @@ const Sidebar = ({ activeRoom, setActiveRoom }) => {
   useEffect(() => {
     fetchRooms();
 
-    if (isSupabase && supabase && user) {
+    if (user?.isDemo) {
+      // Realistic online presence for demo showcase
+      setOnlineUsers([
+        { userId: 'demo-user-123', username: 'HR Recruiter' },
+        { userId: 'nexus-bot', username: 'Nexus Bot 🤖' },
+        { userId: 'uddhav-creator', username: 'Uddhav (Creator)' },
+      ]);
+    } else if (isSupabase && supabase && user) {
       // 1. Listen for new/updated rooms via Supabase Postgres Changes
       const roomChannel = supabase
         .channel('public:rooms')
@@ -80,10 +87,9 @@ const Sidebar = ({ activeRoom, setActiveRoom }) => {
 
   const fetchRooms = async () => {
     try {
-      if (isSupabase) {
+      if (isSupabase || user?.isDemo) {
         const data = await roomService.getRooms();
         setRooms(data);
-        // Automatically select first room if none selected
         if (!activeRoom && data.length > 0) {
           setActiveRoom(data[0]);
         }
@@ -92,7 +98,11 @@ const Sidebar = ({ activeRoom, setActiveRoom }) => {
         setRooms(data);
       }
     } catch (error) {
-      console.error('Failed to fetch rooms', error);
+      console.warn('Failed to fetch rooms, using fallback:', error);
+      setRooms(DEMO_ROOMS);
+      if (!activeRoom && DEMO_ROOMS.length > 0) {
+        setActiveRoom(DEMO_ROOMS[0]);
+      }
     }
   };
 
@@ -101,7 +111,7 @@ const Sidebar = ({ activeRoom, setActiveRoom }) => {
     if (!newRoomName.trim()) return;
 
     try {
-      if (isSupabase) {
+      if (isSupabase || user?.isDemo) {
         const newRoom = await roomService.createRoom(newRoomName, '', user.id || user._id);
         setRooms((prev) => [newRoom, ...prev.filter((r) => r.id !== newRoom.id)]);
         setActiveRoom(newRoom);
@@ -114,18 +124,33 @@ const Sidebar = ({ activeRoom, setActiveRoom }) => {
       setIsCreating(false);
     } catch (error) {
       console.error('Failed to create room', error);
-      alert(error.message || 'Failed to create room. It may already exist.');
+      alert(error.message || 'Failed to create room.');
     }
   };
 
-  const usernameInitial = user?.username ? user.username.charAt(0).toUpperCase() : '?';
+  const usernameInitial = user?.avatar || (user?.username ? user.username.charAt(0).toUpperCase() : '?');
 
   return (
     <div className="sidebar glass">
       <div className="sidebar-header">
-        <h2 className="sidebar-title" style={{ fontFamily: 'Outfit', fontWeight: 700 }}>
-          Nexus <span style={{ color: 'var(--primary)' }}>Chat</span>
-        </h2>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <h2 className="sidebar-title" style={{ fontFamily: 'Outfit', fontWeight: 700, margin: 0 }}>
+            Nexus <span style={{ color: 'var(--primary)' }}>Chat</span>
+          </h2>
+          {user?.isDemo && (
+            <span style={{
+              fontSize: '0.65rem',
+              fontWeight: 600,
+              padding: '0.15rem 0.5rem',
+              borderRadius: '999px',
+              background: 'rgba(99, 102, 241, 0.2)',
+              color: 'var(--primary)',
+              border: '1px solid rgba(99, 102, 241, 0.3)',
+            }}>
+              Demo Mode
+            </span>
+          )}
+        </div>
       </div>
 
       <div className="sidebar-content">
@@ -180,12 +205,14 @@ const Sidebar = ({ activeRoom, setActiveRoom }) => {
       </div>
 
       <div className="sidebar-footer">
-        <div className="avatar">
+        <div className="avatar" style={{ fontSize: user?.avatar ? '1.2rem' : undefined }}>
           {usernameInitial}
           <div className="online-indicator"></div>
         </div>
         <div className="item-info">
-          <div className="item-name">{user?.username || 'Guest'}</div>
+          <div className="item-name" style={{ display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
+            {user?.username || 'Guest'}
+          </div>
           <div className="item-sub" style={{ color: 'var(--success)' }}>
             Online ({Math.max(onlineUsers.length, 1)})
           </div>
@@ -193,7 +220,7 @@ const Sidebar = ({ activeRoom, setActiveRoom }) => {
         <button 
           onClick={logout}
           style={{ background: 'transparent', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer' }}
-          title="Logout"
+          title="Exit / Logout"
         >
           ⎋
         </button>

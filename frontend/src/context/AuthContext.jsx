@@ -6,12 +6,31 @@ import { initSocket, disconnectSocket } from '../services/socket';
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('nexus_demo_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   const [loading, setLoading] = useState(true);
   const [socket, setSocket] = useState(null);
 
   useEffect(() => {
     let mounted = true;
+
+    // Check if demo session is active
+    try {
+      const savedDemo = localStorage.getItem('nexus_demo_user');
+      if (savedDemo) {
+        setUser(JSON.parse(savedDemo));
+        setLoading(false);
+        return;
+      }
+    } catch (e) {
+      console.warn(e);
+    }
 
     if (isSupabaseConfigured && supabase) {
       // 1. Check existing Supabase session
@@ -39,7 +58,9 @@ export const AuthProvider = ({ children }) => {
             const currentUser = await authService.getCurrentUser();
             if (mounted) setUser(currentUser);
           } else {
-            if (mounted) setUser(null);
+            // Keep demo user if set
+            const saved = localStorage.getItem('nexus_demo_user');
+            if (mounted && !saved) setUser(null);
           }
         }
       );
@@ -78,6 +99,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const login = async (email, password) => {
+    localStorage.removeItem('nexus_demo_user');
     if (isSupabaseConfigured) {
       const data = await authService.login(email, password);
       const currentUser = await authService.getCurrentUser();
@@ -96,6 +118,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const register = async (username, email, password) => {
+    localStorage.removeItem('nexus_demo_user');
     if (isSupabaseConfigured) {
       const data = await authService.register(username, email, password);
       const currentUser = await authService.getCurrentUser();
@@ -113,16 +136,38 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
+  const demoLogin = (role = 'HR Recruiter') => {
+    const demoUser = {
+      id: 'demo-user-123',
+      _id: 'demo-user-123',
+      username: role === 'HR Recruiter' ? 'HR Recruiter' : 'Guest Explorer',
+      email: 'recruiter@demo.nexuschat.dev',
+      avatar: '',
+      isDemo: true,
+    };
+    try {
+      localStorage.setItem('nexus_demo_user', JSON.stringify(demoUser));
+    } catch (e) {
+      console.warn(e);
+    }
+    setUser(demoUser);
+    setLoading(false);
+    return demoUser;
+  };
+
   const logout = async () => {
-    if (isSupabaseConfigured) {
-      await authService.logout();
-      setUser(null);
-      return;
+    try {
+      localStorage.removeItem('nexus_demo_user');
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    } catch (e) {
+      console.warn(e);
     }
 
-    // Legacy fallback
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    if (isSupabaseConfigured && !user?.isDemo) {
+      await authService.logout();
+    }
+
     setUser(null);
     disconnectSocket();
     setSocket(null);
@@ -135,6 +180,7 @@ export const AuthProvider = ({ children }) => {
         loading,
         login,
         register,
+        demoLogin,
         logout,
         socket,
         isSupabase: isSupabaseConfigured,
