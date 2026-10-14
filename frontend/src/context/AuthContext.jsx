@@ -136,11 +136,11 @@ export const AuthProvider = ({ children }) => {
     return data;
   };
 
-  const demoLogin = (name = 'Demo User') => {
+  const demoLogin = (name = 'Demo') => {
     const demoUser = {
       id: 'demo-user-123',
       _id: 'demo-user-123',
-      username: name || 'Demo User',
+      username: name || 'Demo',
       email: 'demo@nexuschat.dev',
       avatar: '',
       isDemo: true,

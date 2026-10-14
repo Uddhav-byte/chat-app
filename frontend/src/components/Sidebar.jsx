@@ -17,7 +17,7 @@ const Sidebar = ({ activeRoom, setActiveRoom }) => {
     if (user?.isDemo) {
       // Realistic online presence for demo showcase
       setOnlineUsers([
-        { userId: 'demo-user-123', username: 'Demo User' },
+        { userId: 'demo-user-123', username: user?.username || 'Demo' },
         { userId: 'nexus-bot', username: 'Nexus Bot 🤖' },
         { userId: 'uddhav-creator', username: 'Uddhav (Creator)' },
       ]);
